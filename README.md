@@ -21,6 +21,27 @@ Ekstensi browser berbasis **Manifest V3** untuk menghasilkan kode otentikasi dua
 
 ---
 
+### 🛡️ Keamanan & Privasi Data
+
+Ekstensi ini dirancang dengan prinsip **Privacy by Design** untuk memastikan data sensitif 2FA Anda aman:
+
+1. **100% Pemrosesan Lokal (Offline Only):**
+   * Ekstensi ini **tidak pernah** mengirimkan data *Secret Key*, PIN, atau informasi akun Anda ke server mana pun di internet.
+   * Seluruh kalkulasi algoritma HMAC-SHA1/TOTP dijalankan sepenuhnya di dalam mesin browser lokal Anda.
+
+2. **Penyimpanan Terisolasi (Isolated Storage):**
+   * Data disimpan menggunakan API `chrome.storage.local` yang terisolasi ketat di dalam ruang penyimpanan internal browser Anda.
+   * Aplikasi web external atau ekstensi lain **tidak memiliki akses** untuk membaca data ini.
+
+3. **Proteksi Akses PIN:**
+   * Antarmuka utama dan daftar kode TOTP dilindungi oleh PIN keamanan.
+   * Tindakan kritikal seperti **Menghapus Akun** dan **Export Backup Data** wajib memasukkan verifikasi PIN terlebih dahulu.
+
+4. **Tanpa Pelacakan & Analytics (Zero Telemetry):**
+   * Tidak ada skrip analitik, pelacak perilaku pengguna, atau cookie pihak ketiga yang dipasang pada ekstensi ini.
+
+---
+
 ### 📖 Panduan Penggunaan 3 Tombol Utama
 
 #### 1. ➕ Tambah Manual
@@ -77,6 +98,27 @@ A lightweight **Manifest V3** browser extension for generating real-time two-fac
 - 📋 **One-Click Copy:** Instant copy button to send codes directly to your clipboard.
 - 🔄 **Google Authenticator Import:** Parses `otpauth-migration://` migration payload directly from Google Authenticator.
 - 💾 **JSON Backup & Restore:** Export and import `.json` backup files for smooth migration across computers/browsers.
+
+---
+
+### 🛡️ Security & Data Privacy
+
+This extension is engineered with **Privacy by Design** principles to ensure your sensitive 2FA credentials remain safe:
+
+1. **100% Local Processing (Offline Only):**
+   * This extension **never** transmits your Secret Keys, PIN, or account info to any external server.
+   * All HMAC-SHA1/TOTP calculations are executed natively within your browser environment.
+
+2. **Isolated Local Storage:**
+   * Credentials are saved using `chrome.storage.local`, which is strictly sandboxed inside your browser.
+   * External websites or other browser extensions **cannot** access or read your stored keys.
+
+3. **PIN-Protected Access Control:**
+   * The main user interface and TOTP lists are locked behind your custom PIN.
+   * Sensitive actions such as **Deleting Accounts** and **Exporting Data Backups** require PIN re-verification.
+
+4. **Zero Telemetry & Tracking:**
+   * No analytics scripts, user behavior trackers, or third-party cookies are included in this project.
 
 ---
 
