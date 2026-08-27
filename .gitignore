@@ -1,0 +1,8 @@
+# Abaikan file backup JSON hasil export
+*.json
+!manifest.json
+
+# Abaikan log dan temporary files
+*.log
+.DS_Store
+Thumbs.db
