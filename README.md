@@ -56,22 +56,52 @@ Saat pertama kali mengeklik ekstensi, Anda akan diminta untuk **Membuat PIN Baru
 
 ---
 
-### 📖 4. Panduan 3 Tombol Utama
+### 📖 4. Panduan Detail Penggunaan 3 Tombol Utama
 
 #### 1. ➕ Tambah Manual
 Gunakan tombol ini untuk menambahkan akun 2FA secara satu per satu menggunakan teks kunci rahasia (*Base32 Secret Key*).
-- **Kapan digunakan:** Saat mengaktifkan 2FA di situs (seperti GitHub, Google, atau Facebook) dan memilih opsi *"Can't scan QR code"* untuk mendapatkan teks rahasia.
-- **Cara pakai:** Klik **Tambah Manual** $\rightarrow$ Masukkan nama akun (contoh: `user@gmail.com`) $\rightarrow$ Masukkan *Secret Key* Base32 $\rightarrow$ Masukkan nama penyedia service (contoh: `Google`).
+
+* **Cara Mendapatkan Secret Key dari Website:**
+  1. Buka halaman pengaturan keamanan di website yang ingin diamankan (misal: *Google Account > Security > 2-Step Verification* atau *GitHub > Password & Authentication*).
+  2. Pilih opsi **Set up Authenticator app**.
+  3. Saat gambar **QR Code** muncul di layar, cari dan klik tautan bertuliskan **"Can't scan it?"**, **"Can't scan QR code?"**, atau **"Show Secret Key"**.
+  4. Salin (*copy*) deretan teks rahasia Base32 yang tampil (contoh kombinasi huruf dan angka: `JBSWY3DPEHPK3PXP`).
+
+* **Cara Memasukkan ke Ekstensi:**
+  1. Klik tombol **➕ Tambah Manual** di ekstensi.
+  2. Masukkan nama akun (contoh: `user@gmail.com`).
+  3. Tempelkan (*paste*) **Secret Key Base32** yang telah disalin dari website.
+  4. Masukkan nama penyedia service (contoh: `Google` atau `GitHub`).
+  5. Klik **OK**.
+
+---
 
 #### 2. 📥 Import Data
-Gunakan tombol ini untuk memindahkan/mengimpor banyak akun sekaligus.
-- **Modus 1 (URL Migration Google Authenticator):** Pilih `1` $\rightarrow$ Tempelkan string URL migrasi hasil scan QR Code ekspor Google Authenticator (`otpauth-migration://...`).
-- **Modus 2 (File Backup JSON Terenkripsi):** Pilih `2` $\rightarrow$ Unggah file `.json` hasil ekspor terenkripsi $\rightarrow$ Masukkan PIN yang digunakan saat meng-ekspor file.
+Gunakan tombol ini untuk memindahkan banyak akun sekaligus tanpa mengetik satu per satu.
+
+* **Modus 1 (Impor dari Google Authenticator HP via Transfer Accounts):**
+  1. Buka aplikasi **Google Authenticator** di HP Anda.
+  2. Ketuk ikon menu (garis/titik tiga di pojok atas) > pilih **Transfer accounts** > pilih **Export accounts**.
+  3. Verifikasi keamanan HP (PIN/Biometrik), lalu **centang akun mana saja** yang ingin dipindahkan ke ekstensi. Klik **Next**.
+  4. Aplikasi HP akan menampilkan sebuah **QR Code**. Pindai QR Code tersebut menggunakan perangkat lain atau alat pemindai QR (*QR Code Scanner*) untuk mendapatkan string teks URL.
+  5. Salin teks string URL yang didapat (selalu berawalan `otpauth-migration://offline?data=...`).
+  6. Buka ekstensi di browser > klik **📥 Import Data** > pilih angka **`1`** > tempelkan (*paste*) URL migrasi tersebut.
+
+* **Modus 2 (File Backup JSON Terenkripsi):**
+  1. Klik **📥 Import Data** di ekstensi > pilih angka **`2`**.
+  2. Pilih file `.json` hasil ekspor terenkripsi dari ekstensi ini di komputer/browser lain.
+  3. Masukkan PIN yang digunakan saat meng-ekspor file tersebut untuk mendekripsi data.
+
+---
 
 #### 3. 📤 Export JSON
 Gunakan tombol ini untuk membuat cadangan (*backup*) seluruh akun 2FA yang tersimpan ke dalam file `.json` terenkripsi **AES-GCM 256-bit**.
-- **Kapan digunakan:** Saat ingin mencadangkan data, berpindah komputer, atau menginstal ulang browser.
-- **Cara pakai:** Klik **Export JSON** $\rightarrow$ Masukkan PIN keamanan Anda $\rightarrow$ File `totp_encrypted_backup_xxx.json` akan otomatis terunduh.
+
+* **Kapan digunakan:** Saat ingin mencadangkan data, berpindah komputer, atau menginstal ulang browser.
+* **Cara pakai:**
+  1. Klik tombol **📤 Export JSON**.
+  2. Masukkan PIN keamanan Anda untuk konfirmasi dan pengenkripsian data.
+  3. File `totp_encrypted_backup_xxx.json` akan otomatis terunduh ke komputer Anda. Simpan file ini di tempat yang aman.
 
 ---
 
@@ -90,38 +120,12 @@ A lightweight **Manifest V3** browser extension fully compatible with **Google C
 
 ---
 
-### 📥 1. Download & Extraction Guide
+### 📖 Usage & 3 Main Buttons Guide
 
-1. **Open GitHub Repository:** Navigate to the main repository page in your browser.
-2. **Download ZIP:** Click the green **`<> Code`** button in the top right, then select **`Download ZIP`**.
-3. **Extract Folder:**
-   * Go to your `Downloads` folder, right-click `totp-extension-main.zip`, and choose **Extract All...**.
-   * Move the extracted folder to a safe location on your computer (e.g., `C:\xampp\htdocs\totp-extension`).
-
----
-
-### 🛠️ 2. Browser Installation Guide
-
-#### 🔴 On Google Chrome:
-1. Open **Google Chrome** and go to `chrome://extensions/`.
-2. Enable **Developer mode** in the top-right corner.
-3. Click **Load unpacked** in the top-left corner.
-4. Select the extracted `totp-extension` project folder.
-5. Click the **Extensions (Puzzle)** icon on the toolbar and pin the extension.
-
-#### 🔵 On Microsoft Edge:
-1. Open **Microsoft Edge** and go to `edge://extensions/`.
-2. Enable **Developer mode** in the bottom-left panel.
-3. Click **Load unpacked** at the top.
-4. Select the extracted `totp-extension` project folder.
-5. Click the **Extensions (Puzzle)** icon on the toolbar and set it to **Show in toolbar**.
-
----
-
-### 📖 3. Usage & 3 Main Buttons
-
-- ➕ **Manual Add:** Add 2FA accounts using a Base32 secret text key.
-- 📥 **Import Data:** Import from Google Authenticator migration URLs (`otpauth-migration://`) or encrypted `.json` backup files.
+- ➕ **Manual Add:** Copy the Base32 secret key text from the website's 2FA setup screen (via *"Can't scan QR code"*) and paste it into the extension.
+- 📥 **Import Data:** 
+  - **Mode 1:** Use Google Authenticator's **Transfer accounts > Export accounts** feature on your phone, scan the QR code to get the `otpauth-migration://` URL, and paste it into the extension.
+  - **Mode 2:** Upload an encrypted `.json` backup file and decrypt it using your PIN.
 - 📤 **Export JSON:** Export a PIN-encrypted **AES-256-GCM** `.json` backup file.
 
 ---
