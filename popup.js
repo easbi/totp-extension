@@ -201,31 +201,82 @@ function addTokenManual() {
   });
 }
 
-// 7. Export ke File JSON
-function exportToJson() {
-  const confirmPin = prompt("Masukkan PIN Anda untuk mengekspor data:");
+// --- FUNGSI HELPER ENKRIPSI WEB CRYPTO API ---
+async function getKeyFromPin(pin, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(pin),
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+// 7. Export JSON Terenkripsi dengan PIN
+async function exportToJson() {
+  const confirmPin = prompt("Masukkan PIN Anda untuk meng-enkripsi file backup:");
   if (confirmPin !== appPin) {
     if (confirmPin !== null) alert("PIN Salah! Export dibatalkan.");
     return;
   }
 
-  chrome.storage.local.get(['totp_tokens'], (result) => {
+  chrome.storage.local.get(['totp_tokens'], async (result) => {
     const tokens = result.totp_tokens || [];
     if (tokens.length === 0) {
       alert("Tidak ada data untuk diexport!");
       return;
     }
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tokens, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `totp_backup_${Date.now()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+
+    try {
+      const enc = new TextEncoder();
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await getKeyFromPin(confirmPin, salt);
+
+      const encryptedContent = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: iv },
+        key,
+        enc.encode(JSON.stringify(tokens))
+      );
+
+      // Format payload backup terenkripsi
+      const backupData = {
+        encrypted: true,
+        salt: Array.from(salt),
+        iv: Array.from(iv),
+        data: Array.from(new Uint8Array(encryptedContent))
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `totp_encrypted_backup_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      alert("Backup terenkripsi berhasil diunduh!");
+    } catch (e) {
+      alert("Gagal meng-enkripsi data backup.");
+      console.error(e);
+    }
   });
 }
 
-// 8. Import Data
+// 8. Import Data (Mendukung JSON Terenkripsi & Migration URL)
 function importData() {
   const choice = prompt("Pilih mode Import:\n1. Input URL Migration Google Auth\n2. Upload File Backup JSON\n\nKetik '1' atau '2':");
   
@@ -240,23 +291,56 @@ function importData() {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
           try {
-            const importedTokens = JSON.parse(event.target.result);
-            if (Array.isArray(importedTokens)) {
+            const parsedFile = JSON.parse(event.target.result);
+            let importedTokens = [];
+
+            // Pengecekan apakah file terenkripsi AES
+            if (parsedFile.encrypted) {
+              const inputPin = prompt("File ini terenkripsi. Masukkan PIN yang digunakan saat export:");
+              if (!inputPin) return;
+
+              try {
+                const salt = new Uint8Array(parsedFile.salt);
+                const iv = new Uint8Array(parsedFile.iv);
+                const data = new Uint8Array(parsedFile.data);
+                const key = await getKeyFromPin(inputPin, salt);
+
+                const decryptedContent = await crypto.subtle.decrypt(
+                  { name: "AES-GCM", iv: iv },
+                  key,
+                  data
+                );
+
+                const dec = new TextDecoder();
+                importedTokens = JSON.parse(dec.decode(decryptedContent));
+              } catch (decryptErr) {
+                alert("PIN Salah atau file terenkripsi korup!");
+                return;
+              }
+            } else if (Array.isArray(parsedFile)) {
+              // Dukungan untuk file JSON lama (tanpa enkripsi)
+              importedTokens = parsedFile;
+            } else {
+              alert("Format file JSON tidak dikenali.");
+              return;
+            }
+
+            // Simpan token ke storage lokal
+            if (Array.isArray(importedTokens) && importedTokens.length > 0) {
               chrome.storage.local.get(['totp_tokens'], (result) => {
                 const current = result.totp_tokens || [];
                 const merged = [...current, ...importedTokens];
                 chrome.storage.local.set({ totp_tokens: merged }, () => {
-                  alert("Import berhasil!");
+                  alert(`Import berhasil! Memuat ${importedTokens.length} akun.`);
                   loadTokens();
                 });
               });
-            } else {
-              alert("Format file JSON tidak valid.");
             }
           } catch (err) {
             alert("Gagal membaca file JSON.");
+            console.error(err);
           }
         };
         reader.readAsText(file);
