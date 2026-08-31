@@ -14,6 +14,18 @@ Ekstensi browser berbasis **Manifest V3** yang kompatibel penuh dengan **Google 
 
 ---
 
+### ⚠️ Catatan Keamanan Penting (Security Notice)
+
+> **PERHATIAN:** Keamanan akun dan data 2FA yang tersimpan adalah **tanggung jawab masing-masing pengguna**. 
+
+Untuk menjaga keamanan tingkat maksimal, sangat disarankan untuk menerapkan langkah-langkah berikut:
+1. **Gunakan Browser Secara Private & Aman:** Pastikan perangkat atau komputer yang Anda gunakan bebas dari *malware*, *keylogger*, atau akses pihak ketiga yang tidak sah.
+2. **Kunci Akses Browser:** Amankan browser Anda dengan fitur kunci profil (*Profile Lock*), PIN OS/Perangkat, atau menggunakan ekstensi pengunci browser (*Browser Lock Extension*).
+3. **Manfaatkan Fitur Auto-Lock:** Selalu setel durasi kunci otomatis (*Auto-Lock Timeout*) di dalam ekstensi ini atau tekan tombol **"🔒 Kunci"** saat meninggalkan komputer.
+4. **Simpan Backup Terenkripsi di Tempat Aman:** Simpan file `.json` hasil *Export* di media penyimpanan terpisah yang terenkripsi dan jangan bagikan PIN backup Anda kepada siapa pun.
+
+---
+
 ### 📥 1. Panduan Mengunduh & Ekstrak Repositori
 
 1. **Buka Halaman GitHub:** Akses halaman utama repositori proyek ini di browser Anda.
@@ -117,6 +129,18 @@ Gunakan tombol ini untuk membuat cadangan (*backup*) seluruh akun 2FA yang tersi
 ## 🇬🇧 English
 
 A lightweight **Manifest V3** browser extension fully compatible with **Google Chrome** and **Microsoft Edge** for generating real-time two-factor authentication (2FA / TOTP) codes.
+
+---
+
+### ⚠️ Important Security Notice
+
+> **DISCLAIMER:** Account security and the safety of stored 2FA credentials are **the sole responsibility of each individual user**.
+
+To maintain maximum security:
+1. Ensure your browser and device are secure, private, and free from malware or keyloggers.
+2. Lock your browser or OS session (via Profile Lock, OS PIN, or Browser Lock Extensions) when unattended.
+3. Utilize the Auto-Lock feature within the extension and click **"🔒 Lock"** whenever you step away.
+4. Store exported encrypted backup files securely and never share your PIN.
 
 ---
 
