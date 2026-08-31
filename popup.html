@@ -1,33 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <title>TOTP Authenticator</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <!-- Layar Input PIN Lock -->
-  <div id="lock-screen" class="pin-screen" style="display: none;">
-    <h2>TOTP Easy Authenticator </h2>
-    <p id="pin-msg" style="font-size: 12px; color: #666; margin: 0;">Masukkan PIN Anda:</p>
-    <input type="password" id="pin-field" class="pin-input" maxlength="8" placeholder="****">
+
+  <!-- LAYER 1: PIN / LOCK SCREEN -->
+  <div id="pin-screen">
+    <h2>🔒 TOTP Authenticator</h2>
+    <p id="pin-instruction">Masukkan PIN untuk membuka:</p>
+    <input type="password" id="pin-input" maxlength="8" placeholder="Masukkan PIN">
     <button id="btn-unlock">Buka Akses</button>
   </div>
 
-  <!-- Layar Utama Ekstensi -->
-  <div id="main-screen" class="container" style="display: none;">
-    <h2>Authenticator</h2>
-    <div id="token-list"></div>
+  <!-- LAYER 2: LAYAR UTAMA (SETELAH UNLOCK) -->
+  <div id="main-screen" class="container hidden">
     
-    <div class="actions">
-      <button id="btn-add">Tambah Manual</button>
-      <button id="btn-import">Import Google Auth</button>
-      <button id="btn-export">Export JSON</button>
+    <!-- HEADER LAYAR UTAMA -->
+    <div class="header">
+      <h2>🔑 Kode TOTP</h2>
+      <button id="btn-lock-now" class="btn-icon">🔒 Kunci</button>
     </div>
+
+    <!-- BARIS PENGATURAN DURASI KUNCI OTOMATIS -->
+    <div class="settings-bar">
+      <label for="select-timeout">Kunci Otomatis:</label>
+      <select id="select-timeout">
+        <option value="0">Setiap Dibuka (Selalu Minta PIN)</option>
+        <option value="1">1 Menit</option>
+        <option value="5">5 Menit</option>
+        <option value="10">10 Menit</option>
+        <option value="60">1 Jam</option>
+      </select>
+    </div>
+
+    <!-- CONTAINER DAFTAR AKUN TOTP -->
+    <div id="token-list"></div>
+
+    <!-- TOMBOL AKSI UTAMA -->
+    <div class="action-buttons">
+      <button id="btn-add">➕ Tambah Manual</button>
+      <button id="btn-import">📥 Import Data</button>
+      <button id="btn-export">📤 Export JSON</button>
+    </div>
+    
+    <!-- ELEMENT FILE INPUT TERSEMBUNYI UNTUK IMPORT JSON -->
+    <input type="file" id="import-file" accept=".json" style="display: none;">
   </div>
 
-  <input type="file" id="import-file" style="display: none;" accept=".json">
-
+  <!-- SCRIPT LIBRARIES & LOGIC -->
   <script src="lib/base32.js"></script>
   <script src="lib/jsotp.min.js"></script>
   <script src="lib/google-auth-parser.js"></script>

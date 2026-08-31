@@ -1,64 +1,122 @@
 let appPin = null;
+let lockTimeoutMins = 0;
+let timerInterval = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-  checkPinSetup();
-
-  document.getElementById('btn-unlock').addEventListener('click', verifyPin);
+  checkPinStatus();
+  
+  // Event listener Layar Kunci & Pengaturan Timeout
+  document.getElementById('btn-unlock').addEventListener('click', handleUnlock);
+  document.getElementById('btn-lock-now').addEventListener('click', lockNow);
+  document.getElementById('select-timeout').addEventListener('change', updateTimeoutSetting);
+  
+  // Event listener Tombol Aksi Utama
   document.getElementById('btn-add').addEventListener('click', addTokenManual);
-  document.getElementById('btn-export').addEventListener('click', exportToJson);
   document.getElementById('btn-import').addEventListener('click', importData);
+  document.getElementById('btn-export').addEventListener('click', exportToJson);
 });
 
-// 1. Pengecekan Setup PIN Pertama Kali
-function checkPinSetup() {
-  chrome.storage.local.get(['app_pin'], (result) => {
-    document.getElementById('lock-screen').style.display = 'flex';
-    document.getElementById('main-screen').style.display = 'none';
+// 1. Cek Status PIN & Waktu Terakhir Unlock
+function checkPinStatus() {
+  chrome.storage.local.get(['app_pin', 'last_unlock_time', 'lock_timeout_mins'], (result) => {
+    appPin = result.app_pin || null;
+    lockTimeoutMins = result.lock_timeout_mins !== undefined ? result.lock_timeout_mins : 0;
+    
+    const selectElem = document.getElementById('select-timeout');
+    if (selectElem) selectElem.value = lockTimeoutMins;
 
-    if (!result.app_pin) {
-      document.getElementById('pin-msg').innerText = "Buat PIN Baru (4-8 digit):";
+    if (!appPin) {
+      document.getElementById('pin-instruction').innerText = "Buat PIN Baru (4-8 digit):";
       document.getElementById('btn-unlock').innerText = "Simpan PIN";
     } else {
-      appPin = result.app_pin;
-      document.getElementById('pin-msg').innerText = "Masukkan PIN untuk membuka:";
+      document.getElementById('pin-instruction').innerText = "Masukkan PIN untuk membuka:";
       document.getElementById('btn-unlock').innerText = "Buka Akses";
-    }
-  });
-}
 
-// 2. Verifikasi PIN
-function verifyPin() {
-  const inputPin = document.getElementById('pin-field').value;
-  
-  chrome.storage.local.get(['app_pin'], (result) => {
-    if (!result.app_pin) {
-      if (!inputPin || inputPin.length < 4) {
-        alert("PIN minimal 4 digit!");
+      const now = Date.now();
+      const lastUnlock = result.last_unlock_time || 0;
+      const elapsedMinutes = (now - lastUnlock) / (1000 * 60);
+
+      // JIKA timeout > 0 DAN durasi belum melebihi batas -> LANGSUNG UNLOCK
+      if (lockTimeoutMins > 0 && elapsedMinutes < lockTimeoutMins) {
+        showMainScreen();
         return;
       }
-      chrome.storage.local.set({ app_pin: inputPin }, () => {
-        appPin = inputPin;
-        unlockApp();
-      });
-    } else {
-      if (inputPin === result.app_pin) {
-        unlockApp();
-      } else {
-        alert("PIN Salah!");
-        document.getElementById('pin-field').value = '';
-      }
     }
+    
+    showPinScreen();
   });
 }
 
-function unlockApp() {
-  document.getElementById('lock-screen').style.display = 'none';
-  document.getElementById('main-screen').style.display = 'flex';
-  loadTokens();
-  setInterval(updateCodes, 1000);
+// 2. Logika Buka Kunci (Unlock)
+function handleUnlock() {
+  const inputPin = document.getElementById('pin-input').value;
+  if (!inputPin) return alert("Masukkan PIN!");
+
+  if (!appPin) {
+    if (inputPin.length < 4) {
+      alert("PIN minimal 4 digit!");
+      return;
+    }
+    chrome.storage.local.set({ 
+      app_pin: inputPin,
+      last_unlock_time: Date.now()
+    }, () => {
+      appPin = inputPin;
+      alert("PIN Berhasil dibuat!");
+      showMainScreen();
+    });
+  } else if (inputPin === appPin) {
+    chrome.storage.local.set({ last_unlock_time: Date.now() }, () => {
+      showMainScreen();
+    });
+  } else {
+    alert("PIN Salah!");
+    document.getElementById('pin-input').value = '';
+  }
 }
 
-// 3. Ambil dan Render Data Akun
+// 3. Logika Kunci Sekarang (Manual Lock)
+function lockNow() {
+  chrome.storage.local.set({ last_unlock_time: 0 }, () => {
+    document.getElementById('pin-input').value = '';
+    showPinScreen();
+  });
+}
+
+// 4. Logika Mengubah Pengaturan Durasi Timeout
+function updateTimeoutSetting(e) {
+  const newTimeout = parseInt(e.target.value, 10);
+  lockTimeoutMins = newTimeout;
+  chrome.storage.local.set({ lock_timeout_mins: newTimeout }, () => {
+    console.log(`Auto-lock timeout diubah ke: ${newTimeout} menit`);
+  });
+}
+
+// Helper Tampilan Screen & Timer Generator
+function showMainScreen() {
+  document.getElementById('pin-screen').classList.add('hidden');
+  document.getElementById('main-screen').classList.remove('hidden');
+  loadTokens();
+  
+  if (timerInterval) clearInterval(timerInterval);
+  
+  // Eksekusi langsung agar animasi & angka jalan tanpa tundaan 1 detik
+  updateCodes();
+  timerInterval = setInterval(() => {
+    updateCodes();
+  }, 1000);
+}
+
+function showPinScreen() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  document.getElementById('main-screen').classList.add('hidden');
+  document.getElementById('pin-screen').classList.remove('hidden');
+}
+
+// 5. Ambil dan Render Data Akun
 function loadTokens() {
   chrome.storage.local.get(['totp_tokens'], (result) => {
     const tokens = result.totp_tokens || [];
@@ -66,9 +124,9 @@ function loadTokens() {
   });
 }
 
-// 3. Ambil dan Render Data Akun
 function renderTokens(tokens) {
   const listEl = document.getElementById('token-list');
+  if (!listEl) return;
   listEl.innerHTML = '';
   
   if (tokens.length === 0) {
@@ -80,11 +138,15 @@ function renderTokens(tokens) {
     const card = document.createElement('div');
     card.className = 'token-card';
     card.innerHTML = `
-      <div>
+      <div class="account-info">
         <div class="issuer">${t.issuer || 'Unknown'}</div>
-        <div style="font-size: 13px; font-weight: bold;">${t.name}</div>
+        <div class="account-name">${t.name}</div>
       </div>
-      <div style="display:flex; align-items:center;">
+      <div class="code-wrapper">
+        <svg class="timer-container" width="18" height="18" viewBox="0 0 18 18">
+          <circle class="timer-circle-bg" cx="9" cy="9" r="7"></circle>
+          <circle class="timer-circle" id="timer-${index}" cx="9" cy="9" r="7"></circle>
+        </svg>
         <div class="code" id="code-${index}">------</div>
         <button class="btn-copy" data-index="${index}">Salin</button>
         <button class="btn-delete" data-index="${index}">Hapus</button>
@@ -93,7 +155,6 @@ function renderTokens(tokens) {
     listEl.appendChild(card);
   });
 
-  // Listener Tombol Salin
   document.querySelectorAll('.btn-copy').forEach(button => {
     button.addEventListener('click', (e) => {
       const index = e.target.getAttribute('data-index');
@@ -101,7 +162,6 @@ function renderTokens(tokens) {
     });
   });
 
-  // Listener Tombol Hapus Akun
   document.querySelectorAll('.btn-delete').forEach(button => {
     button.addEventListener('click', (e) => {
       const index = e.target.getAttribute('data-index');
@@ -112,35 +172,32 @@ function renderTokens(tokens) {
   updateCodes();
 }
 
-// Fungsi Salin Kode TOTP ke Clipboard
+// 6. Copy ke Clipboard
 function copyToClipboard(index, btnElement) {
   const codeEl = document.getElementById(`code-${index}`);
   if (!codeEl) return;
 
   const codeText = codeEl.innerText.replace(/\s+/g, '');
-  
   if (codeText === '------') {
     alert("Kode belum siap, silakan tunggu sebentar.");
     return;
   }
 
   navigator.clipboard.writeText(codeText).then(() => {
-    // Memberikan umpan balik visual pada tombol
     const originalText = btnElement.innerText;
     btnElement.innerText = 'Tersalin!';
     btnElement.style.background = '#28a745';
 
     setTimeout(() => {
       btnElement.innerText = originalText;
-      btnElement.style.background = '#28a745'; // dikembalikan lewat CSS
+      btnElement.style.background = '';
     }, 1500);
   }).catch(err => {
     console.error('Gagal menyalin kode:', err);
   });
 }
 
-
-// 4. Proteksi Hapus Akun Menggunakan PIN
+// 7. Hapus Akun Menggunakan PIN
 function deleteTokenWithPin(index) {
   const confirmPin = prompt("Masukkan PIN Anda untuk mengonfirmasi penghapusan:");
   
@@ -160,28 +217,55 @@ function deleteTokenWithPin(index) {
   }
 }
 
-// 5. Generate Kode TOTP Real-time
+// 8. Generate Kode TOTP Real-time & Animasi Ring Timer
 async function updateCodes() {
+  const epoch = Math.floor(Date.now() / 1000);
+  const secondsRemaining = 30 - (epoch % 30);
+  const maxDash = 43.98; // Keliling 2 * PI * r (r=7)
+  const strokeOffset = maxDash * (1 - secondsRemaining / 30);
+
   chrome.storage.local.get(['totp_tokens'], async (result) => {
     const tokens = result.totp_tokens || [];
 
     for (let index = 0; index < tokens.length; index++) {
       const t = tokens[index];
+      
+      // Update Kode OTP
       try {
         if (window.jsotp && window.jsotp.TOTP) {
           const totp = new window.jsotp.TOTP(t.secret);
           const code = await totp.generateCode();
           const codeEl = document.getElementById(`code-${index}`);
-          if (codeEl) codeEl.innerText = code;
+          if (codeEl && codeEl.innerText !== code) {
+            codeEl.innerText = code;
+          }
         }
       } catch (e) {
         console.error("Gagal generate TOTP:", e);
+      }
+
+      // Update Animasi Lingkaran Timer
+      const timerCircle = document.getElementById(`timer-${index}`);
+      if (timerCircle) {
+        if (secondsRemaining === 30) {
+          timerCircle.style.transition = 'none';
+        } else {
+          timerCircle.style.transition = 'stroke-dashoffset 1s linear, stroke 0.3s ease';
+        }
+
+        timerCircle.style.strokeDashoffset = strokeOffset;
+
+        if (secondsRemaining <= 5) {
+          timerCircle.style.stroke = '#dc3545';
+        } else {
+          timerCircle.style.stroke = '#007bff';
+        }
       }
     }
   });
 }
 
-// 6. Tambah Akun Manual
+// 9. Tambah Akun Manual
 function addTokenManual() {
   const name = prompt("Masukkan Nama Akun (misal: user@gmail.com):");
   if (!name) return;
@@ -201,7 +285,7 @@ function addTokenManual() {
   });
 }
 
-// --- FUNGSI HELPER ENKRIPSI WEB CRYPTO API ---
+// --- FUNGSI HELPER ENKRIPSI AES WEB CRYPTO ---
 async function getKeyFromPin(pin, salt) {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -225,7 +309,7 @@ async function getKeyFromPin(pin, salt) {
   );
 }
 
-// 7. Export JSON Terenkripsi dengan PIN
+// 10. Export JSON Terenkripsi AES
 async function exportToJson() {
   const confirmPin = prompt("Masukkan PIN Anda untuk meng-enkripsi file backup:");
   if (confirmPin !== appPin) {
@@ -252,7 +336,6 @@ async function exportToJson() {
         enc.encode(JSON.stringify(tokens))
       );
 
-      // Format payload backup terenkripsi
       const backupData = {
         encrypted: true,
         salt: Array.from(salt),
@@ -276,7 +359,7 @@ async function exportToJson() {
   });
 }
 
-// 8. Import Data (Mendukung JSON Terenkripsi & Migration URL)
+// 11. Import Data (Mendukung JSON Terenkripsi & Migration URL)
 function importData() {
   const choice = prompt("Pilih mode Import:\n1. Input URL Migration Google Auth\n2. Upload File Backup JSON\n\nKetik '1' atau '2':");
   
@@ -296,7 +379,6 @@ function importData() {
             const parsedFile = JSON.parse(event.target.result);
             let importedTokens = [];
 
-            // Pengecekan apakah file terenkripsi AES
             if (parsedFile.encrypted) {
               const inputPin = prompt("File ini terenkripsi. Masukkan PIN yang digunakan saat export:");
               if (!inputPin) return;
@@ -320,14 +402,12 @@ function importData() {
                 return;
               }
             } else if (Array.isArray(parsedFile)) {
-              // Dukungan untuk file JSON lama (tanpa enkripsi)
               importedTokens = parsedFile;
             } else {
               alert("Format file JSON tidak dikenali.");
               return;
             }
 
-            // Simpan token ke storage lokal
             if (Array.isArray(importedTokens) && importedTokens.length > 0) {
               chrome.storage.local.get(['totp_tokens'], (result) => {
                 const current = result.totp_tokens || [];
@@ -349,12 +429,12 @@ function importData() {
   }
 }
 
-// 9. Parser Google Authenticator Migration URL
+// 12. Parser Google Authenticator Migration URL
 function parseGoogleAuthMigration(urlStr) {
   try {
     const importedTokens = window.GoogleAuthParser.parseUrl(urlStr);
 
-    if (importedTokens.length === 0) {
+    if (!importedTokens || importedTokens.length === 0) {
       alert('Tidak ada akun yang berhasil dibaca.');
       return;
     }
