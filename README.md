@@ -1,4 +1,4 @@
-# 🔑 TOTP Authenticator Browser Extension
+# 🔑 TOTP Authenticator Browser Extension (Chrome & Edge)
 
 [🇮🇩 Bahasa Indonesia](#-bahasa-indonesia) | [🇬🇧 English](#-english)
 
@@ -6,15 +6,17 @@
 
 ## 🇮🇩 Bahasa Indonesia
 
-Ekstensi browser berbasis **Manifest V3** untuk menghasilkan kode otentikasi dua faktor (2FA / TOTP) secara *real-time* langsung dari browser Anda. Dilengkapi dengan proteksi PIN keamanan, fitur salin otomatis, animasi timer lingkaran, durasi kunci otomatis, serta enkripsi backup AES-256.
+Ekstensi browser berbasis **Manifest V3** yang kompatibel penuh dengan **Google Chrome** dan **Microsoft Edge** untuk menghasilkan kode otentikasi dua faktor (2FA / TOTP) secara *real-time*. Dilengkapi dengan proteksi PIN keamanan, fitur salin otomatis, animasi timer lingkaran, durasi kunci otomatis, serta enkripsi backup AES-256.
 
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)
+![Chrome & Edge Supported](https://img.shields.io/badge/Browser-Chrome%20%7C%20Edge-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 ### 🚀 Fitur Utama
 
+- 🌐 **Kompatibilitas Lintas Browser:** Berjalan lancar di **Google Chrome**, **Microsoft Edge**, Brave, Opera, dan browser berbasis Chromium lainnya.
 - 🔐 **Proteksi PIN Akses:** Mengunci daftar kode TOTP serta mengamankan tindakan sensitif (penghapusan akun & ekspor data).
-- ⏱️ **Kunci Otomatis Kustom (Auto-Lock Timeout):** Pengaturan batas waktu mengunci kembali ekstensi (Setiap dibuka, 1m, 5m, 10m, 1h) serta tombol **"🔒 Kunci Now"** instan.
+- ⏱️ **Kunci Otomatis Kustom (Auto-Lock Timeout):** Pengaturan batas waktu mengunci kembali ekstensi (Setiap dibuka, 1m, 5m, 10m, 1h) serta tombol **"🔒 Kunci"** instan.
 - ⏳ **Visual Circular Countdown Timer:** Animasi timer SVG melingkar ala Google Authenticator yang berkurang secara *real-time* dan berubah merah saat sisa 5 detik.
 - ⚡ **Generator Kode Real-Time:** Menghasilkan 6 digit kode TOTP setiap 30 detik menggunakan Web Crypto API lokal.
 - 📋 **Salin Satu Klik:** Tombol salin instan untuk menempelkan kode langsung ke *clipboard*.
@@ -75,26 +77,35 @@ Gunakan tombol ini untuk membuat cadangan (*backup*) seluruh akun 2FA yang tersi
 
 ---
 
-### 🛠️ Cara Instalasi (Chrome / Edge / Brave / Opera)
+### 🛠️ Cara Instalasi
 
+#### 🔴 Di Google Chrome:
 1. Unduh atau *clone* repositori ini ke komputer Anda.
-2. Buka browser Chromium pilihan Anda, lalu akses alamat `chrome://extensions/`.
+2. Buka Google Chrome, lalu akses alamat `chrome://extensions/`.
 3. Aktifkan **Developer mode** (Mode Pengembang) di pojok kanan atas.
 4. Klik tombol **Load unpacked** (Muat yang belum dikemas) di pojok kiri atas.
 5. Pilih folder proyek `totp-extension` ini.
-6. Ekstensi siap digunakan dari *toolbar* browser Anda!
+
+#### 🔵 Di Microsoft Edge:
+1. Unduh atau *clone* repositori ini ke komputer Anda.
+2. Buka Microsoft Edge, lalu akses alamat `edge://extensions/`.
+3. Aktifkan **Developer mode** di panel sebelah kiri bawah.
+4. Klik tombol **Load unpacked** di bagian atas.
+5. Pilih folder proyek `totp-extension` ini.
 
 ---
 
 ## 🇬🇧 English
 
-A lightweight **Manifest V3** browser extension for generating real-time two-factor authentication (2FA / TOTP) codes directly in your browser. Features PIN security protection, circular countdown timers, configurable auto-lock duration, 1-click copy, AES-256 backup encryption, and Google Authenticator import support.
+A lightweight **Manifest V3** browser extension fully compatible with **Google Chrome** and **Microsoft Edge** for generating real-time two-factor authentication (2FA / TOTP) codes directly in your browser. Features PIN security protection, circular countdown timers, configurable auto-lock duration, 1-click copy, AES-256 backup encryption, and Google Authenticator import support.
 
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)
+![Chrome & Edge Supported](https://img.shields.io/badge/Browser-Chrome%20%7C%20Edge-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 ### 🚀 Key Features
 
+- 🌐 **Cross-Browser Support:** Works seamlessly on **Google Chrome**, **Microsoft Edge**, Brave, Opera, and other Chromium-based browsers.
 - 🔐 **PIN Access Protection:** Locks TOTP code access and secures sensitive actions (account deletion & data export).
 - ⏱️ **Custom Auto-Lock Timeout:** Configurable inactivity timeout (Every open, 1m, 5m, 10m, 1h) plus an instant **"🔒 Lock Now"** button.
 - ⏳ **Visual Circular Countdown Timer:** Google Authenticator-style SVG ring animation that diminishes in real-time and turns red in the last 5 seconds.
@@ -157,14 +168,21 @@ Use this button to generate a PIN-encrypted backup file containing all your stor
 
 ---
 
-### 🛠️ Installation Guide (Chrome / Edge / Brave / Opera)
+### 🛠️ Installation Guide
 
+#### 🔴 On Google Chrome:
 1. Download or clone this repository to your computer.
-2. Open your Chromium-based browser and navigate to `chrome://extensions/`.
+2. Open Google Chrome and navigate to `chrome://extensions/`.
 3. Enable **Developer mode** in the top-right corner.
-4. Click the **Load unpacked** button in the top-left corner.
+4. Click **Load unpacked** in the top-left corner.
 5. Select this `totp-extension` project folder.
-6. The extension is ready to use from your browser toolbar!
+
+#### 🔵 On Microsoft Edge:
+1. Download or clone this repository to your computer.
+2. Open Microsoft Edge and navigate to `edge://extensions/`.
+3. Enable **Developer mode** in the bottom-left panel.
+4. Click **Load unpacked** at the top.
+5. Select this `totp-extension` project folder.
 
 ---
 
