@@ -12,177 +12,117 @@ Ekstensi browser berbasis **Manifest V3** yang kompatibel penuh dengan **Google 
 ![Chrome & Edge Supported](https://img.shields.io/badge/Browser-Chrome%20%7C%20Edge-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-### 🚀 Fitur Utama
+---
 
-- 🌐 **Kompatibilitas Lintas Browser:** Berjalan lancar di **Google Chrome**, **Microsoft Edge**, Brave, Opera, dan browser berbasis Chromium lainnya.
-- 🔐 **Proteksi PIN Akses:** Mengunci daftar kode TOTP serta mengamankan tindakan sensitif (penghapusan akun & ekspor data).
-- ⏱️ **Kunci Otomatis Kustom (Auto-Lock Timeout):** Pengaturan batas waktu mengunci kembali ekstensi (Setiap dibuka, 1m, 5m, 10m, 1h) serta tombol **"🔒 Kunci"** instan.
-- ⏳ **Visual Circular Countdown Timer:** Animasi timer SVG melingkar ala Google Authenticator yang berkurang secara *real-time* dan berubah merah saat sisa 5 detik.
-- ⚡ **Generator Kode Real-Time:** Menghasilkan 6 digit kode TOTP setiap 30 detik menggunakan Web Crypto API lokal.
-- 📋 **Salin Satu Klik:** Tombol salin instan untuk menempelkan kode langsung ke *clipboard*.
-- 🔄 **Impor Google Authenticator:** Mendukung parsing data migrasi `otpauth-migration://` dari Google Authenticator.
-- 💾 **Encrypted Backup JSON:** Ekspor file `.json` terenkripsi **AES-GCM 256-bit** berbasis PIN untuk migrasi aman antar komputer/browser.
+### 📥 1. Panduan Mengunduh & Ekstrak Repositori
+
+1. **Buka Halaman GitHub:** Akses halaman utama repositori proyek ini di browser Anda.
+2. **Unduh File ZIP:** Klik tombol hijau **`<> Code`** di pojok kanan atas, lalu pilih **`Download ZIP`**.
+3. **Ekstrak Folder:**
+   * Buka folder `Downloads` di komputer Anda, klik kanan pada file `totp-extension-main.zip`, lalu pilih **Extract All...** (atau *Extract Here* jika menggunakan WinRAR/7-Zip).
+   * Pindahkan folder hasil ekstraksi ke lokasi yang aman di PC Anda agar tidak sengaja terhapus (contoh: `C:\xampp\htdocs\totp-extension` atau `D:\Project\totp-extension`).
 
 ---
 
-### 🛡️ Keamanan & Privasi Data
-
-Ekstensi ini dirancang dengan prinsip **Privacy by Design** untuk memastikan data sensitif 2FA Anda aman:
-
-1. **100% Pemrosesan Lokal (Offline Only):**
-   * Ekstensi ini **tidak pernah** mengirimkan data *Secret Key*, PIN, atau informasi akun Anda ke server mana pun di internet.
-   * Seluruh kalkulasi algoritma HMAC-SHA1/TOTP dijalankan sepenuhnya di dalam mesin browser lokal Anda.
-
-2. **Enkripsi Backup AES-256-GCM:**
-   * File `.json` hasil *Export* dienkripsi ketat menggunakan PIN Anda via algoritma **AES-GCM 256-bit** dan PBKDF2. Kunci rahasia Anda tidak dapat dibaca dalam bentuk teks biasa (*plain text*).
-
-3. **Penyimpanan Terisolasi (Isolated Storage):**
-   * Data disimpan menggunakan API `chrome.storage.local` yang terisolasi ketat di dalam ruang penyimpanan internal browser Anda.
-   * Aplikasi web external atau ekstensi lain **tidak memiliki akses** untuk membaca data ini.
-
-4. **Tanpa Pelacakan & Analytics (Zero Telemetry):**
-   * Tidak ada skrip analitik, pelacak perilaku pengguna, atau cookie pihak ketiga yang dipasang pada ekstensi ini.
-
----
-
-### 📖 Panduan Penggunaan 3 Tombol Utama
-
-#### 1. ➕ Tambah Manual
-Gunakan tombol ini jika Anda ingin menambahkan akun 2FA secara satu per satu menggunakan teks kunci rahasia (*Base32 Secret Key*).
-- **Kapan digunakan:** Saat mengaktifkan 2FA di layanan web (seperti GitHub, Google, atau Facebook) dan Anda memilih opsi *"Can't scan QR code"* untuk mendapatkan teks rahasia.
-- **Cara pakai:**
-  1. Klik **Tambah Manual**.
-  2. Masukkan nama akun (contoh: `user@gmail.com`).
-  3. Masukkan *Secret Key* Base32 (kombinasi huruf A-Z dan angka 2-7).
-  4. Masukkan nama penyedia service (contoh: `Google` atau `GitHub`).
-
-#### 2. 📥 Import Data
-Gunakan tombol ini untuk memindahkan/mengimpor banyak akun sekaligus tanpa perlu mengetiknya satu per satu.
-- **Modus 1 (URL Migration Google Authenticator):**
-  1. Buka aplikasi Google Authenticator di HP > pilih **Transfer accounts** / **Export accounts**.
-  2. Pindai QR Code hasil ekspor menggunakan QR Code Scanner di HP lain/web untuk mendapatkan string URL yang berawalan `otpauth-migration://offline?data=...`.
-  3. Klik **Import Data** di ekstensi > pilih angka `1` > tempelkan URL migrasi tersebut.
-- **Modus 2 (File Backup JSON Terenkripsi):**
-  1. Klik **Import Data** > pilih angka `2`.
-  2. Pilih file `.json` hasil ekspor terenkripsi dari ekstensi ini di perangkat lain.
-  3. Masukkan PIN yang digunakan saat meng-ekspor file tersebut untuk mendekripsi data.
-
-#### 3. 📤 Export JSON
-Gunakan tombol ini untuk membuat cadangan (*backup*) seluruh akun 2FA yang tersimpan ke dalam file `.json` terenkripsi.
-- **Kapan digunakan:** Saat Anda ingin mencadangkan data, berpindah komputer, atau menginstal ulang browser.
-- **Cara pakai:**
-  1. Klik **Export JSON**.
-  2. Masukkan PIN keamanan Anda untuk mengkonfirmasi dan meng-enkripsi file backup.
-  3. File `totp_encrypted_backup_xxx.json` akan otomatis terunduh. Simpan file ini di tempat yang aman.
-
----
-
-### 🛠️ Cara Instalasi
+### 🛠️ 2. Cara Instalasi di Browser
 
 #### 🔴 Di Google Chrome:
-1. Unduh atau *clone* repositori ini ke komputer Anda.
-2. Buka Google Chrome, lalu akses alamat `chrome://extensions/`.
-3. Aktifkan **Developer mode** (Mode Pengembang) di pojok kanan atas.
+1. Buka browser **Google Chrome**.
+2. Ketik `chrome://extensions/` pada baris alamat (address bar) lalu tekan **Enter**.
+3. Aktifkan *toggle* **Developer mode** (Mode Pengembang) di pojok kanan atas layar.
 4. Klik tombol **Load unpacked** (Muat yang belum dikemas) di pojok kiri atas.
-5. Pilih folder proyek `totp-extension` ini.
+5. Pilih folder proyek `totp-extension` yang telah diekstrak tadi.
+6. Klik ikon **Ekstensi (Puzzle)** di toolbar Chrome, lalu klik ikon **Pin** agar ekstensi tetap terlihat.
 
 #### 🔵 Di Microsoft Edge:
-1. Unduh atau *clone* repositori ini ke komputer Anda.
-2. Buka Microsoft Edge, lalu akses alamat `edge://extensions/`.
-3. Aktifkan **Developer mode** di panel sebelah kiri bawah.
-4. Klik tombol **Load unpacked** di bagian atas.
-5. Pilih folder proyek `totp-extension` ini.
+1. Buka browser **Microsoft Edge**.
+2. Ketik `edge://extensions/` pada baris alamat (address bar) lalu tekan **Enter**.
+3. Aktifkan *toggle* **Developer mode** di panel sebelah kiri bawah.
+4. Klik tombol **Load unpacked** di bagian atas layar.
+5. Pilih folder proyek `totp-extension` yang telah diekstrak tadi.
+6. Klik ikon **Ekstensi (Puzzle)** di toolbar Edge, lalu klik ikon **Mata (Show in toolbar)**.
+
+---
+
+### 🚀 3. Fitur Utama & Penggunaan
+
+Saat pertama kali mengeklik ekstensi, Anda akan diminta untuk **Membuat PIN Baru (4-8 Digit)**.
+
+- 🔐 **Proteksi PIN Akses:** Mengunci daftar kode TOTP serta mengamankan tindakan sensitif (penghapusan akun & ekspor data).
+- ⏱️ **Kunci Otomatis Kustom (Auto-Lock Timeout):** Pengaturan durasi mengunci kembali ekstensi (Setiap dibuka, 1m, 5m, 10m, 1h) serta tombol **"🔒 Kunci"** instan di header.
+- ⏳ **Visual Circular Countdown Timer:** Animasi timer SVG melingkar ala Google Authenticator di sebelah kode 6-digit yang menyusut secara *real-time* dan berubah merah saat sisa 5 detik.
+- ⚡ **Generator Kode Real-Time:** Menghasilkan 6 digit kode TOTP setiap 30 detik menggunakan Web Crypto API lokal.
+- 📋 **Salin Satu Klik:** Tombol salin instan untuk menempelkan kode langsung ke *clipboard*.
+
+---
+
+### 📖 4. Panduan 3 Tombol Utama
+
+#### 1. ➕ Tambah Manual
+Gunakan tombol ini untuk menambahkan akun 2FA secara satu per satu menggunakan teks kunci rahasia (*Base32 Secret Key*).
+- **Kapan digunakan:** Saat mengaktifkan 2FA di situs (seperti GitHub, Google, atau Facebook) dan memilih opsi *"Can't scan QR code"* untuk mendapatkan teks rahasia.
+- **Cara pakai:** Klik **Tambah Manual** $\rightarrow$ Masukkan nama akun (contoh: `user@gmail.com`) $\rightarrow$ Masukkan *Secret Key* Base32 $\rightarrow$ Masukkan nama penyedia service (contoh: `Google`).
+
+#### 2. 📥 Import Data
+Gunakan tombol ini untuk memindahkan/mengimpor banyak akun sekaligus.
+- **Modus 1 (URL Migration Google Authenticator):** Pilih `1` $\rightarrow$ Tempelkan string URL migrasi hasil scan QR Code ekspor Google Authenticator (`otpauth-migration://...`).
+- **Modus 2 (File Backup JSON Terenkripsi):** Pilih `2` $\rightarrow$ Unggah file `.json` hasil ekspor terenkripsi $\rightarrow$ Masukkan PIN yang digunakan saat meng-ekspor file.
+
+#### 3. 📤 Export JSON
+Gunakan tombol ini untuk membuat cadangan (*backup*) seluruh akun 2FA yang tersimpan ke dalam file `.json` terenkripsi **AES-GCM 256-bit**.
+- **Kapan digunakan:** Saat ingin mencadangkan data, berpindah komputer, atau menginstal ulang browser.
+- **Cara pakai:** Klik **Export JSON** $\rightarrow$ Masukkan PIN keamanan Anda $\rightarrow$ File `totp_encrypted_backup_xxx.json` akan otomatis terunduh.
+
+---
+
+### 🛡️ 5. Keamanan & Privasi Data
+
+1. **100% Pemrosesan Lokal (Offline Only):** Tidak pernah mengirimkan data *Secret Key*, PIN, atau akun ke server mana pun di internet.
+2. **Enkripsi Backup AES-256-GCM:** File `.json` dienkripsi menggunakan PIN via algoritma **AES-GCM 256-bit** dan PBKDF2.
+3. **Penyimpanan Terisolasi:** Data disimpan menggunakan API `chrome.storage.local` yang terisolasi di internal browser.
+4. **Tanpa Pelacakan (Zero Telemetry):** Bebas dari skrip analitik, pelacak perilaku, atau cookie pihak ketiga.
 
 ---
 
 ## 🇬🇧 English
 
-A lightweight **Manifest V3** browser extension fully compatible with **Google Chrome** and **Microsoft Edge** for generating real-time two-factor authentication (2FA / TOTP) codes directly in your browser. Features PIN security protection, circular countdown timers, configurable auto-lock duration, 1-click copy, AES-256 backup encryption, and Google Authenticator import support.
-
-![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)
-![Chrome & Edge Supported](https://img.shields.io/badge/Browser-Chrome%20%7C%20Edge-brightgreen.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
-
-### 🚀 Key Features
-
-- 🌐 **Cross-Browser Support:** Works seamlessly on **Google Chrome**, **Microsoft Edge**, Brave, Opera, and other Chromium-based browsers.
-- 🔐 **PIN Access Protection:** Locks TOTP code access and secures sensitive actions (account deletion & data export).
-- ⏱️ **Custom Auto-Lock Timeout:** Configurable inactivity timeout (Every open, 1m, 5m, 10m, 1h) plus an instant **"🔒 Lock Now"** button.
-- ⏳ **Visual Circular Countdown Timer:** Google Authenticator-style SVG ring animation that diminishes in real-time and turns red in the last 5 seconds.
-- ⚡ **Real-Time Code Generator:** Generates 6-digit TOTP codes every 30 seconds using native Web Crypto API.
-- 📋 **One-Click Copy:** Instant copy button to send codes directly to your clipboard.
-- 🔄 **Google Authenticator Import:** Parses `otpauth-migration://` migration payload directly from Google Authenticator.
-- 💾 **AES-256 Encrypted JSON Backup:** Export and import PIN-encrypted `.json` backup files for secure migration across computers/browsers.
+A lightweight **Manifest V3** browser extension fully compatible with **Google Chrome** and **Microsoft Edge** for generating real-time two-factor authentication (2FA / TOTP) codes.
 
 ---
 
-### 🛡️ Security & Data Privacy
+### 📥 1. Download & Extraction Guide
 
-This extension is engineered with **Privacy by Design** principles to ensure your sensitive 2FA credentials remain safe:
-
-1. **100% Local Processing (Offline Only):**
-   * This extension **never** transmits your Secret Keys, PIN, or account info to any external server.
-   * All HMAC-SHA1/TOTP calculations are executed natively within your browser environment.
-
-2. **AES-256-GCM Encrypted Backups:**
-   * Exported `.json` files are encrypted using your PIN via **AES-GCM 256-bit** and PBKDF2 key derivation. Your secret keys are never stored as plain text in backups.
-
-3. **Isolated Local Storage:**
-   * Credentials are saved using `chrome.storage.local`, which is strictly sandboxed inside your browser.
-   * External websites or other browser extensions **cannot** access or read your stored keys.
-
-4. **Zero Telemetry & Tracking:**
-   * No analytics scripts, user behavior trackers, or third-party cookies are included in this project.
+1. **Open GitHub Repository:** Navigate to the main repository page in your browser.
+2. **Download ZIP:** Click the green **`<> Code`** button in the top right, then select **`Download ZIP`**.
+3. **Extract Folder:**
+   * Go to your `Downloads` folder, right-click `totp-extension-main.zip`, and choose **Extract All...**.
+   * Move the extracted folder to a safe location on your computer (e.g., `C:\xampp\htdocs\totp-extension`).
 
 ---
 
-### 📖 3 Main Buttons Usage Guide
-
-#### 1. ➕ Manual Add (Tambah Manual)
-Use this button to manually add a 2FA account using its Base32 secret key text.
-- **When to use:** When setting up 2FA on websites (like GitHub, Google, or Facebook) and selecting the *"Can't scan QR code"* option to reveal the secret text key.
-- **How to use:**
-  1. Click **Tambah Manual**.
-  2. Enter account name (e.g., `user@gmail.com`).
-  3. Enter Base32 Secret Key (letters A-Z and numbers 2-7).
-  4. Enter Issuer name (e.g., `Google` or `GitHub`).
-
-#### 2. 📥 Import Data
-Use this button to bulk import accounts from Google Authenticator or an encrypted JSON backup file.
-- **Mode 1 (Google Authenticator Migration URL):**
-  1. Open Google Authenticator on your mobile phone > select **Transfer accounts** / **Export accounts**.
-  2. Scan the generated QR code using another device/scanner to obtain the string starting with `otpauth-migration://offline?data=...`.
-  3. Click **Import Data** in the extension > type `1` > paste the migration URL.
-- **Mode 2 (Encrypted JSON Backup File):**
-  1. Click **Import Data** > type `2`.
-  2. Select the exported `.json` file from another browser/computer.
-  3. Enter the PIN used during export to decrypt and restore the backup data.
-
-#### 3. 📤 Export JSON
-Use this button to generate a PIN-encrypted backup file containing all your stored 2FA accounts in `.json` format.
-- **When to use:** When backing up data, switching computers, or reinstalling your browser.
-- **How to use:**
-  1. Click **Export JSON**.
-  2. Enter your security PIN for confirmation and encryption.
-  3. The `totp_encrypted_backup_xxx.json` file will automatically download. Store this file in a safe location.
-
----
-
-### 🛠️ Installation Guide
+### 🛠️ 2. Browser Installation Guide
 
 #### 🔴 On Google Chrome:
-1. Download or clone this repository to your computer.
-2. Open Google Chrome and navigate to `chrome://extensions/`.
-3. Enable **Developer mode** in the top-right corner.
-4. Click **Load unpacked** in the top-left corner.
-5. Select this `totp-extension` project folder.
+1. Open **Google Chrome** and go to `chrome://extensions/`.
+2. Enable **Developer mode** in the top-right corner.
+3. Click **Load unpacked** in the top-left corner.
+4. Select the extracted `totp-extension` project folder.
+5. Click the **Extensions (Puzzle)** icon on the toolbar and pin the extension.
 
 #### 🔵 On Microsoft Edge:
-1. Download or clone this repository to your computer.
-2. Open Microsoft Edge and navigate to `edge://extensions/`.
-3. Enable **Developer mode** in the bottom-left panel.
-4. Click **Load unpacked** at the top.
-5. Select this `totp-extension` project folder.
+1. Open **Microsoft Edge** and go to `edge://extensions/`.
+2. Enable **Developer mode** in the bottom-left panel.
+3. Click **Load unpacked** at the top.
+4. Select the extracted `totp-extension` project folder.
+5. Click the **Extensions (Puzzle)** icon on the toolbar and set it to **Show in toolbar**.
+
+---
+
+### 📖 3. Usage & 3 Main Buttons
+
+- ➕ **Manual Add:** Add 2FA accounts using a Base32 secret text key.
+- 📥 **Import Data:** Import from Google Authenticator migration URLs (`otpauth-migration://`) or encrypted `.json` backup files.
+- 📤 **Export JSON:** Export a PIN-encrypted **AES-256-GCM** `.json` backup file.
 
 ---
 
