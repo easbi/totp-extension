@@ -6,17 +6,37 @@
 
 ## 🇮🇩 Bahasa Indonesia
 
-Ekstensi browser berbasis **Manifest V3** yang kompatibel penuh dengan **Google Chrome** dan **Microsoft Edge** untuk menghasilkan kode otentikasi dua faktor (2FA / TOTP) secara *real-time*. Dilengkapi dengan proteksi PIN keamanan, fitur salin otomatis, animasi timer lingkaran, durasi kunci otomatis, serta enkripsi backup AES-256.
+Ekstensi browser berbasis **Manifest V3** yang kompatibel penuh dengan **Google Chrome** dan **Microsoft Edge** untuk menghasilkan kode otentikasi dua faktor (2FA / TOTP) secara *real-time*. Dilengkapi dengan arsitektur **Encrypted Vault (AES-256-GCM)** di tingkat penyimpanan lokal, proteksi PIN keamanan, fitur salin otomatis, animasi timer lingkaran, durasi kunci otomatis, serta enkripsi backup.
 
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)
 ![Chrome & Edge Supported](https://img.shields.io/badge/Browser-Chrome%20%7C%20Edge-brightgreen.svg)
+![Encryption](https://img.shields.io/badge/Storage-AES--256--GCM-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
+
+---
+
+### 🛡️ Arsitektur Keamanan & Privasi (Privacy by Design)
+
+Ekstensi ini dirancang dengan standar keamanan tinggi untuk memastikan data sensitif 2FA Anda aman dari kebocoran:
+
+1. **Penyimpanan Lokal Terenkripsi (At-Rest Encrypted Vault):**
+   * Data *Secret Key* **TIDAK PERNAH** disimpan dalam bentuk teks biasa (*plain text*) di dalam `chrome.storage.local`.
+   * Seluruh data akun dienkripsi ketat menggunakan algoritma **AES-GCM 256-bit** dengan kunci rahasia (*Master Key*) yang diturunkan dari PIN pengguna via **PBKDF2 (100.000 iterasi SHA-256)**.
+2. **Dekripsi Hanya di Memori (In-Memory Decryption Only):**
+   * Data rahasia (*decrypted secrets*) hanya berada di memori RAM selama sesi ekstensi terbuka (*unlocked*).
+   * Saat timeout tercapai atau tombol **"🔒 Kunci"** ditekan, data rahasia dan kunci dekripsi langsung **dihapus total dari RAM**.
+3. **PIN Tidak Disimpan Mentah:**
+   * PIN pengguna tidak pernah disimpan di media penyimpanan. Verifikasi PIN menggunakan skema verifier terenkripsi.
+4. **100% Pemrosesan Lokal (Offline Only & Zero Telemetry):**
+   * Ekstensi ini berjalan sepenuhnya secara *offline*. Tidak ada server backend, tidak ada pelacak analitik, dan tidak ada data yang dikirim ke internet.
+5. **Backup Terenkripsi AES-256:**
+   * File ekspor `.json` dienkripsi terpisah menggunakan PIN berbasis PBKDF2 + AES-GCM 256-bit.
 
 ---
 
 ### ⚠️ Catatan Keamanan Penting (Security Notice)
 
-> **PERHATIAN:** Keamanan akun dan data 2FA yang tersimpan adalah **tanggung jawab masing-masing pengguna**. 
+> **PERHATIAN:** Keamanan akun dan data 2FA yang tersimpan adalah **tanggung jawab masing-masing pengguna**.
 
 Untuk menjaga keamanan tingkat maksimal, sangat disarankan untuk menerapkan langkah-langkah berikut:
 1. **Gunakan Browser Secara Private & Aman:** Pastikan perangkat atau komputer yang Anda gunakan bebas dari *malware*, *keylogger*, atau akses pihak ketiga yang tidak sah.
@@ -60,7 +80,7 @@ Untuk menjaga keamanan tingkat maksimal, sangat disarankan untuk menerapkan lang
 
 Saat pertama kali mengeklik ekstensi, Anda akan diminta untuk **Membuat PIN Baru (4-8 Digit)**.
 
-- 🔐 **Proteksi PIN Akses:** Mengunci daftar kode TOTP serta mengamankan tindakan sensitif (penghapusan akun & ekspor data).
+- 🔐 **Proteksi PIN & Encrypted Vault:** Mengunci dan mengenkripsi seluruh data TOTP di penyimpanan lokal.
 - ⏱️ **Kunci Otomatis Kustom (Auto-Lock Timeout):** Pengaturan durasi mengunci kembali ekstensi (Setiap dibuka, 1m, 5m, 10m, 1h) serta tombol **"🔒 Kunci"** instan di header.
 - ⏳ **Visual Circular Countdown Timer:** Animasi timer SVG melingkar ala Google Authenticator di sebelah kode 6-digit yang menyusut secara *real-time* dan berubah merah saat sisa 5 detik.
 - ⚡ **Generator Kode Real-Time:** Menghasilkan 6 digit kode TOTP setiap 30 detik menggunakan Web Crypto API lokal.
@@ -117,18 +137,18 @@ Gunakan tombol ini untuk membuat cadangan (*backup*) seluruh akun 2FA yang tersi
 
 ---
 
-### 🛡️ 5. Keamanan & Privasi Data
+## 🇬🇧 English
 
-1. **100% Pemrosesan Lokal (Offline Only):** Tidak pernah mengirimkan data *Secret Key*, PIN, atau akun ke server mana pun di internet.
-2. **Enkripsi Backup AES-256-GCM:** File `.json` dienkripsi menggunakan PIN via algoritma **AES-GCM 256-bit** dan PBKDF2.
-3. **Penyimpanan Terisolasi:** Data disimpan menggunakan API `chrome.storage.local` yang terisolasi di internal browser.
-4. **Tanpa Pelacakan (Zero Telemetry):** Bebas dari skrip analitik, pelacak perilaku, atau cookie pihak ketiga.
+A lightweight **Manifest V3** browser extension fully compatible with **Google Chrome** and **Microsoft Edge** for generating real-time two-factor authentication (2FA / TOTP) codes. Built with an **AES-256-GCM Encrypted Vault** architecture.
 
 ---
 
-## 🇬🇧 English
+### 🛡️ Security Architecture & Privacy (Privacy by Design)
 
-A lightweight **Manifest V3** browser extension fully compatible with **Google Chrome** and **Microsoft Edge** for generating real-time two-factor authentication (2FA / TOTP) codes.
+1. **At-Rest Encrypted Vault:** All secret keys stored in `chrome.storage.local` are encrypted with **AES-GCM 256-bit** derived via **PBKDF2 (100,000 iterations)**. Secrets are never saved as plain text.
+2. **In-Memory Decryption Only:** Decrypted secrets reside in RAM only while the extension is unlocked. Locking the app clears sensitive data from memory immediately.
+3. **100% Local & Offline:** No remote servers, no tracking, zero telemetry.
+4. **Encrypted Backups:** Exported `.json` files are protected using PIN-derived AES-256-GCM encryption.
 
 ---
 
@@ -144,23 +164,13 @@ To maintain maximum security:
 
 ---
 
-### 📖 Usage & 3 Main Buttons Guide
-
-- ➕ **Manual Add:** Copy the Base32 secret key text from the website's 2FA setup screen (via *"Can't scan QR code"*) and paste it into the extension.
-- 📥 **Import Data:** 
-  - **Mode 1:** Use Google Authenticator's **Transfer accounts > Export accounts** feature on your phone, scan the QR code to get the `otpauth-migration://` URL, and paste it into the extension.
-  - **Mode 2:** Upload an encrypted `.json` backup file and decrypt it using your PIN.
-- 📤 **Export JSON:** Export a PIN-encrypted **AES-256-GCM** `.json` backup file.
-
----
-
 ## 📂 Project Structure / Struktur Proyek
 
 ```text
 totp-extension/
 ├── manifest.json            # Manifest V3 extension configuration
 ├── popup.html               # Popup UI layout
-├── popup.js                 # Event listeners, animation, logic, and storage operations
+├── popup.js                 # Event listeners, Encrypted Vault, PBKDF2 logic, and rendering
 ├── popup.css                # Styling for popup interface, SVG timer, and layout
 ├── icon.png                 # Extension logo
 ├── .gitignore               # Ignored files for Git

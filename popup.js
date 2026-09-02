@@ -1,89 +1,195 @@
-let appPin = null;
+let decryptedTokens = null; // Menyimpan data rahasia HANYA di memori selama sesi unlocked
+let masterKey = null;       // Key AES-GCM yang diturunkan dari PIN (in-memory)
 let lockTimeoutMins = 0;
 let timerInterval = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   checkPinStatus();
   
-  // Event listener Layar Kunci & Pengaturan Timeout
   document.getElementById('btn-unlock').addEventListener('click', handleUnlock);
   document.getElementById('btn-lock-now').addEventListener('click', lockNow);
   document.getElementById('select-timeout').addEventListener('change', updateTimeoutSetting);
   
-  // Event listener Tombol Aksi Utama
   document.getElementById('btn-add').addEventListener('click', addTokenManual);
   document.getElementById('btn-import').addEventListener('click', importData);
   document.getElementById('btn-export').addEventListener('click', exportToJson);
 });
 
-// 1. Cek Status PIN & Waktu Terakhir Unlock
+// --- HELPER KRYPTOGRAFI (PBKDF2 & AES-GCM) ---
+async function deriveKey(pin, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(pin),
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+// Enkripsi Data Vault
+async function encryptVault(dataArray, key) {
+  const enc = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: iv },
+    key,
+    enc.encode(JSON.stringify(dataArray))
+  );
+  return {
+    iv: Array.from(iv),
+    ciphertext: Array.from(new Uint8Array(encrypted))
+  };
+}
+
+// Dekripsi Data Vault
+async function decryptVault(encryptedVault, key) {
+  const dec = new TextDecoder();
+  const iv = new Uint8Array(encryptedVault.iv);
+  const ciphertext = new Uint8Array(encryptedVault.ciphertext);
+  
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: iv },
+    key,
+    ciphertext
+  );
+  return JSON.parse(dec.decode(decrypted));
+}
+
+// --- LOGIKA UTAMA EKSTENSI ---
+
 function checkPinStatus() {
-  chrome.storage.local.get(['app_pin', 'last_unlock_time', 'lock_timeout_mins'], (result) => {
-    appPin = result.app_pin || null;
+  chrome.storage.local.get(['vault_salt', 'pin_verifier', 'last_unlock_time', 'lock_timeout_mins'], (result) => {
+    const isPinCreated = !!result.pin_verifier;
     lockTimeoutMins = result.lock_timeout_mins !== undefined ? result.lock_timeout_mins : 0;
     
     const selectElem = document.getElementById('select-timeout');
     if (selectElem) selectElem.value = lockTimeoutMins;
 
-    if (!appPin) {
+    if (!isPinCreated) {
       document.getElementById('pin-instruction').innerText = "Buat PIN Baru (4-8 digit):";
       document.getElementById('btn-unlock').innerText = "Simpan PIN";
+      showPinScreen();
     } else {
       document.getElementById('pin-instruction').innerText = "Masukkan PIN untuk membuka:";
       document.getElementById('btn-unlock').innerText = "Buka Akses";
-
-      const now = Date.now();
-      const lastUnlock = result.last_unlock_time || 0;
-      const elapsedMinutes = (now - lastUnlock) / (1000 * 60);
-
-      // JIKA timeout > 0 DAN durasi belum melebihi batas -> LANGSUNG UNLOCK
-      if (lockTimeoutMins > 0 && elapsedMinutes < lockTimeoutMins) {
-        showMainScreen();
-        return;
-      }
+      showPinScreen();
     }
-    
-    showPinScreen();
   });
 }
 
-// 2. Logika Buka Kunci (Unlock)
-function handleUnlock() {
+// Verifikasi PIN & Buka Vault
+async function handleUnlock() {
   const inputPin = document.getElementById('pin-input').value;
   if (!inputPin) return alert("Masukkan PIN!");
 
-  if (!appPin) {
-    if (inputPin.length < 4) {
-      alert("PIN minimal 4 digit!");
-      return;
+  chrome.storage.local.get(['vault_salt', 'pin_verifier', 'encrypted_vault'], async (result) => {
+    try {
+      if (!result.pin_verifier) {
+        // SETUP PERTAMA KALI
+        if (inputPin.length < 4) return alert("PIN minimal 4 digit!");
+        
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const key = await deriveKey(inputPin, salt);
+        
+        // Buat verifier hash untuk mencocokkan PIN di masa depan tanpa menyimpan PIN mentah
+        const verifierIv = crypto.getRandomValues(new Uint8Array(12));
+        const verifierEnc = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: verifierIv },
+          key,
+          new TextEncoder().encode("VERIFIED_PIN")
+        );
+
+        // Vault awal kosong
+        const emptyVault = await encryptVault([], key);
+
+        chrome.storage.local.set({
+          vault_salt: Array.from(salt),
+          pin_verifier: {
+            iv: Array.from(verifierIv),
+            data: Array.from(new Uint8Array(verifierEnc))
+          },
+          encrypted_vault: emptyVault,
+          last_unlock_time: Date.now()
+        }, () => {
+          masterKey = key;
+          decryptedTokens = [];
+          alert("PIN & Vault Berhasil dibuat!");
+          showMainScreen();
+        });
+
+      } else {
+        // UNLOCK BIASA
+        const salt = new Uint8Array(result.vault_salt);
+        const key = await deriveKey(inputPin, salt);
+
+        // Coba dekripsi verifier untuk cek apakah PIN benar
+        try {
+          const verifierIv = new Uint8Array(result.pin_verifier.iv);
+          const verifierData = new Uint8Array(result.pin_verifier.data);
+          const decVerifier = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: verifierIv },
+            key,
+            verifierData
+          );
+          
+          if (new TextDecoder().decode(decVerifier) !== "VERIFIED_PIN") {
+            throw new Error("Invalid PIN");
+          }
+        } catch (e) {
+          alert("PIN Salah!");
+          document.getElementById('pin-input').value = '';
+          return;
+        }
+
+        // PIN Benar, dekripsi Vault TOTP
+        masterKey = key;
+        if (result.encrypted_vault) {
+          decryptedTokens = await decryptVault(result.encrypted_vault, masterKey);
+        } else {
+          decryptedTokens = [];
+        }
+
+        chrome.storage.local.set({ last_unlock_time: Date.now() }, () => {
+          showMainScreen();
+        });
+      }
+    } catch (err) {
+      console.error("Gagal melakukan unlock:", err);
+      alert("Terjadi kesalahan sistem dekripsi.");
     }
-    chrome.storage.local.set({ 
-      app_pin: inputPin,
-      last_unlock_time: Date.now()
-    }, () => {
-      appPin = inputPin;
-      alert("PIN Berhasil dibuat!");
-      showMainScreen();
-    });
-  } else if (inputPin === appPin) {
-    chrome.storage.local.set({ last_unlock_time: Date.now() }, () => {
-      showMainScreen();
-    });
-  } else {
-    alert("PIN Salah!");
-    document.getElementById('pin-input').value = '';
-  }
+  });
 }
 
-// 3. Logika Kunci Sekarang (Manual Lock)
+// Simpan Perubahan ke Vault Terenkripsi
+async function saveVault() {
+  if (!masterKey || !decryptedTokens) return;
+  const newEncryptedVault = await encryptVault(decryptedTokens, masterKey);
+  chrome.storage.local.set({ encrypted_vault: newEncryptedVault });
+}
+
+// Kunci Manual & Hapus Data dari Memori
 function lockNow() {
   chrome.storage.local.set({ last_unlock_time: 0 }, () => {
+    masterKey = null;
+    decryptedTokens = null; // Hapus data dari RAM
     document.getElementById('pin-input').value = '';
     showPinScreen();
   });
 }
 
-// 4. Logika Mengubah Pengaturan Durasi Timeout
 function updateTimeoutSetting(e) {
   const newTimeout = parseInt(e.target.value, 10);
   lockTimeoutMins = newTimeout;
@@ -92,15 +198,12 @@ function updateTimeoutSetting(e) {
   });
 }
 
-// Helper Tampilan Screen & Timer Generator
 function showMainScreen() {
   document.getElementById('pin-screen').classList.add('hidden');
   document.getElementById('main-screen').classList.remove('hidden');
-  loadTokens();
+  renderTokens(decryptedTokens || []);
   
   if (timerInterval) clearInterval(timerInterval);
-  
-  // Eksekusi langsung agar animasi & angka jalan tanpa tundaan 1 detik
   updateCodes();
   timerInterval = setInterval(() => {
     updateCodes();
@@ -112,16 +215,12 @@ function showPinScreen() {
     clearInterval(timerInterval);
     timerInterval = null;
   }
+  // Kosongkan data memori saat terkunci
+  masterKey = null;
+  decryptedTokens = null;
+  
   document.getElementById('main-screen').classList.add('hidden');
   document.getElementById('pin-screen').classList.remove('hidden');
-}
-
-// 5. Ambil dan Render Data Akun
-function loadTokens() {
-  chrome.storage.local.get(['totp_tokens'], (result) => {
-    const tokens = result.totp_tokens || [];
-    renderTokens(tokens);
-  });
 }
 
 function renderTokens(tokens) {
@@ -172,7 +271,6 @@ function renderTokens(tokens) {
   updateCodes();
 }
 
-// 6. Copy ke Clipboard
 function copyToClipboard(index, btnElement) {
   const codeEl = document.getElementById(`code-${index}`);
   if (!codeEl) return;
@@ -197,76 +295,59 @@ function copyToClipboard(index, btnElement) {
   });
 }
 
-// 7. Hapus Akun Menggunakan PIN
-function deleteTokenWithPin(index) {
-  const confirmPin = prompt("Masukkan PIN Anda untuk mengonfirmasi penghapusan:");
+async function deleteTokenWithPin(index) {
+  if (!decryptedTokens) return;
+  const removedAccount = decryptedTokens[index]?.name || 'Akun';
+  decryptedTokens.splice(index, 1);
   
-  if (confirmPin === appPin) {
-    chrome.storage.local.get(['totp_tokens'], (result) => {
-      const tokens = result.totp_tokens || [];
-      const removedAccount = tokens[index]?.name || 'Akun';
-      tokens.splice(index, 1);
-      
-      chrome.storage.local.set({ totp_tokens: tokens }, () => {
-        alert(`${removedAccount} berhasil dihapus.`);
-        loadTokens();
-      });
-    });
-  } else if (confirmPin !== null) {
-    alert("PIN Salah! Penghapusan dibatalkan.");
+  await saveVault();
+  alert(`${removedAccount} berhasil dihapus.`);
+  renderTokens(decryptedTokens);
+}
+
+async function updateCodes() {
+  if (!decryptedTokens) return;
+  
+  const epoch = Math.floor(Date.now() / 1000);
+  const secondsRemaining = 30 - (epoch % 30);
+  const maxDash = 43.98;
+  const strokeOffset = maxDash * (1 - secondsRemaining / 30);
+
+  for (let index = 0; index < decryptedTokens.length; index++) {
+    const t = decryptedTokens[index];
+    try {
+      if (window.jsotp && window.jsotp.TOTP) {
+        const totp = new window.jsotp.TOTP(t.secret);
+        const code = await totp.generateCode();
+        const codeEl = document.getElementById(`code-${index}`);
+        if (codeEl && codeEl.innerText !== code) {
+          codeEl.innerText = code;
+        }
+      }
+    } catch (e) {
+      console.error("Gagal generate TOTP:", e);
+    }
+
+    const timerCircle = document.getElementById(`timer-${index}`);
+    if (timerCircle) {
+      if (secondsRemaining === 30) {
+        timerCircle.style.transition = 'none';
+      } else {
+        timerCircle.style.transition = 'stroke-dashoffset 1s linear, stroke 0.3s ease';
+      }
+
+      timerCircle.style.strokeDashoffset = strokeOffset;
+
+      if (secondsRemaining <= 5) {
+        timerCircle.style.stroke = '#dc3545';
+      } else {
+        timerCircle.style.stroke = '#007bff';
+      }
+    }
   }
 }
 
-// 8. Generate Kode TOTP Real-time & Animasi Ring Timer
-async function updateCodes() {
-  const epoch = Math.floor(Date.now() / 1000);
-  const secondsRemaining = 30 - (epoch % 30);
-  const maxDash = 43.98; // Keliling 2 * PI * r (r=7)
-  const strokeOffset = maxDash * (1 - secondsRemaining / 30);
-
-  chrome.storage.local.get(['totp_tokens'], async (result) => {
-    const tokens = result.totp_tokens || [];
-
-    for (let index = 0; index < tokens.length; index++) {
-      const t = tokens[index];
-      
-      // Update Kode OTP
-      try {
-        if (window.jsotp && window.jsotp.TOTP) {
-          const totp = new window.jsotp.TOTP(t.secret);
-          const code = await totp.generateCode();
-          const codeEl = document.getElementById(`code-${index}`);
-          if (codeEl && codeEl.innerText !== code) {
-            codeEl.innerText = code;
-          }
-        }
-      } catch (e) {
-        console.error("Gagal generate TOTP:", e);
-      }
-
-      // Update Animasi Lingkaran Timer
-      const timerCircle = document.getElementById(`timer-${index}`);
-      if (timerCircle) {
-        if (secondsRemaining === 30) {
-          timerCircle.style.transition = 'none';
-        } else {
-          timerCircle.style.transition = 'stroke-dashoffset 1s linear, stroke 0.3s ease';
-        }
-
-        timerCircle.style.strokeDashoffset = strokeOffset;
-
-        if (secondsRemaining <= 5) {
-          timerCircle.style.stroke = '#dc3545';
-        } else {
-          timerCircle.style.stroke = '#007bff';
-        }
-      }
-    }
-  });
-}
-
-// 9. Tambah Akun Manual
-function addTokenManual() {
+async function addTokenManual() {
   const name = prompt("Masukkan Nama Akun (misal: user@gmail.com):");
   if (!name) return;
   let secret = prompt("Masukkan Secret Key (Base32):");
@@ -276,90 +357,55 @@ function addTokenManual() {
   secret = secret.toUpperCase().replace(/[^A-Z2-7]/g, '');
   const newToken = { name, secret, issuer };
 
-  chrome.storage.local.get(['totp_tokens'], (result) => {
-    const tokens = result.totp_tokens || [];
-    tokens.push(newToken);
-    chrome.storage.local.set({ totp_tokens: tokens }, () => {
-      loadTokens();
-    });
-  });
+  decryptedTokens.push(newToken);
+  await saveVault();
+  renderTokens(decryptedTokens);
 }
 
-// --- FUNGSI HELPER ENKRIPSI AES WEB CRYPTO ---
-async function getKeyFromPin(pin, salt) {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(pin),
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
-  return crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: salt,
-      iterations: 100000,
-      hash: "SHA-256"
-    },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"]
-  );
-}
-
-// 10. Export JSON Terenkripsi AES
 async function exportToJson() {
-  const confirmPin = prompt("Masukkan PIN Anda untuk meng-enkripsi file backup:");
-  if (confirmPin !== appPin) {
-    if (confirmPin !== null) alert("PIN Salah! Export dibatalkan.");
+  if (!decryptedTokens || decryptedTokens.length === 0) {
+    alert("Tidak ada data untuk diexport!");
     return;
   }
 
-  chrome.storage.local.get(['totp_tokens'], async (result) => {
-    const tokens = result.totp_tokens || [];
-    if (tokens.length === 0) {
-      alert("Tidak ada data untuk diexport!");
-      return;
-    }
+  try {
+    const enc = new TextEncoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    
+    // Minta masukan PIN untuk enkripsi file backup terpisah
+    const exportPin = prompt("Masukkan PIN untuk mengenkripsi file backup:");
+    if (!exportPin) return;
 
-    try {
-      const enc = new TextEncoder();
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const key = await getKeyFromPin(confirmPin, salt);
+    const exportKey = await deriveKey(exportPin, salt);
+    const encryptedContent = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: iv },
+      exportKey,
+      enc.encode(JSON.stringify(decryptedTokens))
+    );
 
-      const encryptedContent = await crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: iv },
-        key,
-        enc.encode(JSON.stringify(tokens))
-      );
+    const backupData = {
+      encrypted: true,
+      salt: Array.from(salt),
+      iv: Array.from(iv),
+      data: Array.from(new Uint8Array(encryptedContent))
+    };
 
-      const backupData = {
-        encrypted: true,
-        salt: Array.from(salt),
-        iv: Array.from(iv),
-        data: Array.from(new Uint8Array(encryptedContent))
-      };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `totp_encrypted_backup_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
 
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `totp_encrypted_backup_${Date.now()}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-
-      alert("Backup terenkripsi berhasil diunduh!");
-    } catch (e) {
-      alert("Gagal meng-enkripsi data backup.");
-      console.error(e);
-    }
-  });
+    alert("Backup terenkripsi berhasil diunduh!");
+  } catch (e) {
+    alert("Gagal meng-enkripsi data backup.");
+    console.error(e);
+  }
 }
 
-// 11. Import Data (Mendukung JSON Terenkripsi & Migration URL)
 function importData() {
   const choice = prompt("Pilih mode Import:\n1. Input URL Migration Google Auth\n2. Upload File Backup JSON\n\nKetik '1' atau '2':");
   
@@ -387,7 +433,7 @@ function importData() {
                 const salt = new Uint8Array(parsedFile.salt);
                 const iv = new Uint8Array(parsedFile.iv);
                 const data = new Uint8Array(parsedFile.data);
-                const key = await getKeyFromPin(inputPin, salt);
+                const key = await deriveKey(inputPin, salt);
 
                 const decryptedContent = await crypto.subtle.decrypt(
                   { name: "AES-GCM", iv: iv },
@@ -409,14 +455,10 @@ function importData() {
             }
 
             if (Array.isArray(importedTokens) && importedTokens.length > 0) {
-              chrome.storage.local.get(['totp_tokens'], (result) => {
-                const current = result.totp_tokens || [];
-                const merged = [...current, ...importedTokens];
-                chrome.storage.local.set({ totp_tokens: merged }, () => {
-                  alert(`Import berhasil! Memuat ${importedTokens.length} akun.`);
-                  loadTokens();
-                });
-              });
+              decryptedTokens = [...(decryptedTokens || []), ...importedTokens];
+              await saveVault();
+              alert(`Import berhasil! Memuat ${importedTokens.length} akun.`);
+              renderTokens(decryptedTokens);
             }
           } catch (err) {
             alert("Gagal membaca file JSON.");
@@ -429,7 +471,6 @@ function importData() {
   }
 }
 
-// 12. Parser Google Authenticator Migration URL
 function parseGoogleAuthMigration(urlStr) {
   try {
     const importedTokens = window.GoogleAuthParser.parseUrl(urlStr);
@@ -439,14 +480,10 @@ function parseGoogleAuthMigration(urlStr) {
       return;
     }
 
-    chrome.storage.local.get(['totp_tokens'], (result) => {
-      const current = result.totp_tokens || [];
-      const merged = [...current, ...importedTokens];
-
-      chrome.storage.local.set({ totp_tokens: merged }, () => {
-        alert(`Berhasil mengimpor ${importedTokens.length} akun dari Google Authenticator!`);
-        loadTokens();
-      });
+    decryptedTokens = [...(decryptedTokens || []), ...importedTokens];
+    saveVault().then(() => {
+      alert(`Berhasil mengimpor ${importedTokens.length} akun dari Google Authenticator!`);
+      renderTokens(decryptedTokens);
     });
 
   } catch (e) {
